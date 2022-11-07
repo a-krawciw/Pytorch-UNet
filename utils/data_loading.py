@@ -31,14 +31,14 @@ class BasicDataset(Dataset):
         newW, newH = int(scale * w), int(scale * h)
         assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
         pil_img = pil_img.resize((newW, newH), resample=Image.NEAREST if is_mask else Image.BICUBIC)
-        img_ndarray = np.asarray(pil_img)
+        img_ndarray = np.array(pil_img)
 
         if not is_mask:
             if img_ndarray.ndim == 2:
                 img_ndarray = img_ndarray[np.newaxis, ...]
             else:
                 img_ndarray = img_ndarray.transpose((2, 0, 1))
-
+        else:
             img_ndarray = img_ndarray / 255
 
         return img_ndarray
@@ -59,7 +59,7 @@ class BasicDataset(Dataset):
         img_file = list(self.images_dir.glob(name + '.*'))
 
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
-        assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name}: {mask_file}'
+        assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name + self.mask_suffix + ".*"}: {mask_file}'
         mask = self.load(mask_file[0])
         img = self.load(img_file[0])
 
