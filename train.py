@@ -11,21 +11,22 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
-from utils.data_loading import BasicDataset, CarvanaDataset
+from utils.data_loading import BasicDataset
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
 
-dir_img = Path('./val/imgs/')
-dir_mask = Path('./val/masks/')
+dataset_dir = Path("/home/alec/Documents/UofT/AER1515/coat_pass2")
+dir_img = dataset_dir / "range"
+dir_mask = dataset_dir / "mask"
 dir_checkpoint = Path('./checkpoints/')
-
+dir_output = dataset_dir
 
 def train_net(net,
               device,
               epochs: int = 5,
               batch_size: int = 1,
-              learning_rate: float = 1e-5,
+              learning_rate: float = 5e-5,
               val_percent: float = 0.1,
               save_checkpoint: bool = True,
               img_scale: float = 0.5,
@@ -144,12 +145,12 @@ def train_net(net,
             torch.save(net.state_dict(), str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
     experiment.finish()
-    sys.exit(0)
+    print("Finished")
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=10, help='Number of epochs')
+    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=5, help='Number of epochs')
     parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=4, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
                         help='Learning rate', dest='lr')
@@ -195,6 +196,8 @@ if __name__ == '__main__':
                   img_scale=args.scale,
                   val_percent=args.val / 100,
                   amp=args.amp)
+        print("tada")
+        torch.save(net.state_dict(), dir_output / "model.pth")
     except KeyboardInterrupt:
         torch.save(net.state_dict(), 'INTERRUPTED.pth')
         logging.info('Saved interrupt')
