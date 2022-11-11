@@ -25,8 +25,7 @@ class BasicDataset(Dataset):
     def __len__(self):
         return len(self.ids)
 
-    @staticmethod
-    def preprocess(pil_img, scale, is_mask):
+    def preprocess(self, pil_img, scale, is_mask):
         w, h = pil_img.size
         newW, newH = int(scale * w), int(scale * h)
         assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
@@ -59,7 +58,8 @@ class BasicDataset(Dataset):
         img_file = list(self.images_dir.glob(name + '.*'))
 
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
-        assert len(mask_file) == 1, f'Either no mask or multiple masks found for the ID {name + self.mask_suffix + ".*"}: {mask_file}'
+        assert len(
+            mask_file) == 1, f'Either no mask or multiple masks found for the ID {name + self.mask_suffix + ".*"}: {mask_file}'
         mask = self.load(mask_file[0])
         img = self.load(img_file[0])
 
@@ -73,6 +73,25 @@ class BasicDataset(Dataset):
             'image': torch.as_tensor(img.copy()).float().contiguous(),
             'mask': torch.as_tensor(mask.copy()).long().contiguous()
         }
+
+
+class ShuffledDataset(BasicDataset):
+    def __init__(self, images_dir, masks_dir, img_width):
+        super().__init__(images_dir, masks_dir, 1)
+        self.idx_offset = 0
+        self._img_width = img_width
+
+    def __getitem__(self, item):
+        self.idx_offset = np.random.randint(0, self._img_width)
+        return super().__getitem__(item)
+
+    def preprocess(self, pil_img, scale, is_mask):
+        img = super().preprocess(pil_img, scale, is_mask).squeeze()
+        img_cop = img.copy()
+        img[:, 0:-self.idx_offset] = img_cop[:, self.idx_offset:]
+        img[:, -self.idx_offset:] = img_cop[:, 0:self.idx_offset]
+
+        return img
 
 
 class CarvanaDataset(BasicDataset):

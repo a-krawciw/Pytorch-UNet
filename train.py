@@ -11,7 +11,7 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
-from utils.data_loading import BasicDataset
+from utils.data_loading import BasicDataset, ShuffledDataset
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
@@ -33,7 +33,7 @@ def train_net(net,
               amp: bool = False):
     # 1. Create dataset
     try:
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+        dataset = ShuffledDataset(dir_img, dir_mask, img_scale)
     except (AssertionError, RuntimeError):
         dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
 
