@@ -88,12 +88,11 @@ PLOT = False
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    dataset_dir = Path("/home/alec/Documents/UofT/AER1515/coat_pass2")
-
+    dataset_dir = Path("/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed/combined_data/test")
     images_dir = dataset_dir / "range"
-    out_mask_dir = dataset_dir / "preds"
+    out_mask_dir = dataset_dir / "pred"
     masks_dir = dataset_dir / "mask"
-    model_dir = Path("/home/alec/Documents/UofT/AER1515/coat_pass3")
+    model_dir = Path("/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet")
     #images_dir = Path("./data/imgs")
     #out_mask_dir = Path("./val/preds")
     #masks_dir = Path("./data/masks")
