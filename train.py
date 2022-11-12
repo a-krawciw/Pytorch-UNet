@@ -11,7 +11,7 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split, ConcatDataset
 from tqdm import tqdm
 
-from utils.data_loading import BasicDataset
+from utils.data_loading import BasicDataset, ShuffledDataset
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
