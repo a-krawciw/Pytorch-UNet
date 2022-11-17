@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-
+from matplotlib import pyplot as plt
 
 class BasicDataset(Dataset):
     def __init__(self, images_dir: str, masks_dir: str, scale: float = 1.0, mask_suffix: str = ''):
@@ -25,7 +25,7 @@ class BasicDataset(Dataset):
     def __len__(self):
         return len(self.ids)
 
-    def preprocess(self, pil_img, scale, is_mask):
+    def preprocess(self,pil_img, scale, is_mask):
         w, h = pil_img.size
         newW, newH = int(scale * w), int(scale * h)
         assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
@@ -82,14 +82,19 @@ class ShuffledDataset(BasicDataset):
         self._img_width = img_width
 
     def __getitem__(self, item):
-        self.idx_offset = np.random.randint(0, self._img_width)
+        self.idx_offset = np.random.randint(1, self._img_width*720) # Temporary Hardcoded image_width for now
         return super().__getitem__(item)
 
     def preprocess(self, pil_img, scale, is_mask):
-        img = super().preprocess(pil_img, scale, is_mask).squeeze()
+        img = super().preprocess(pil_img, scale, is_mask)
         img_cop = img.copy()
-        img[:, 0:-self.idx_offset] = img_cop[:, self.idx_offset:]
-        img[:, -self.idx_offset:] = img_cop[:, 0:self.idx_offset]
+
+        if is_mask:
+            img[:, 0:-self.idx_offset] = img_cop[:, self.idx_offset:]
+            img[:, -self.idx_offset:] = img_cop[:, 0:self.idx_offset]
+        else:
+            img[:, :, 0:-self.idx_offset] = img_cop[:, :, self.idx_offset:]
+            img[:, :, -self.idx_offset:] = img_cop[:, :, 0:self.idx_offset]
 
         return img
 
