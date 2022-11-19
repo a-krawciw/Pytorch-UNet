@@ -18,9 +18,9 @@ from unet import UNet
 
 dataset_dir = Path("/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed")
 run_list = [
-            "_2019-02-09-13-04-06", # 5m  SEQ: 1
-            "_2019-02-09-13-04-51", # 5m  SEQ: 2
-            "_2019-02-09-13-07-14", # 10m SEQ: 3
+            "_2019-02-09-13-04-06", # 5m  SEQ: 1 
+            "_2019-02-09-13-04-51", # 5m  SEQ: 2 
+            "_2019-02-09-13-07-14", # 10m SEQ: 3 
             #"_2019-02-09-13-08-12", # 10m SEQ: 4 # Note this one appears malformed, dont use
             #"_2019-02-09-15-16-08", # 5m  SEQ: 15 # I think the mask is empty on this one
             #"_2019-02-09-15-16-50", # 5m  SEQ: 16 # has a bad mask
@@ -28,19 +28,15 @@ run_list = [
             #"_2019-02-09-15-19-03", # 10m SEQ: 18 # has bad mask
             "_2019-02-09-15-52-16", # 5m  SEQ: 28
             "_2019-02-09-15-55-03", # 10m SEQ: 29
-            #"_2019-02-09-14-56-32",  # Toward SEQ: 38
-            #"_2019-02-09-15-32-23", # Toward SEQ: 40
+            "_2019-02-09-14-56-32",  # Toward SEQ: 38
+            "_2019-02-09-15-32-23", # Toward SEQ: 40
             #"_2019-02-09-14-59-13", # Curved SEQ: 46 # Quite far
             #"_2019-02-09-15-00-09", # Curved SEQ: 47 # Quite far
             #"_2019-02-09-15-01-27", # ZigZag SEQ: 48 # Quite far
             #"_2019-02-09-15-34-30", # Curved SEQ: 49
-            #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
+            "_2019-02-09-15-36-46" # ZigZag SEQ: 51
 ]
 
-# Testing to see if with random data shuffling if we replicate the data it improves performance
-# I think every epoch the data does indeed get reshuffled. In theory this means that adding more epochs is equivalent to
-# doubling the image set size. That is probably preferred and learning rate can just be decreased to compensate.
-# run_list = run_list.append(run_list)
 dir_img = dataset_dir / "range"
 dir_mask = dataset_dir / "mask"
 dir_checkpoint = Path('./checkpoints/')
@@ -63,8 +59,8 @@ def train_net(net,
         dir_mask = dataset_dir / each_run / "mask"
         # 1. Create dataset
         try:
-            #dataset = BasicDataset(dir_img, dir_mask, img_scale)
-            dataset = ShuffledDataset(dir_img, dir_mask, img_scale)
+            dataset = BasicDataset(dir_img, dir_mask, img_scale)
+            #dataset = ShuffledDataset(dir_img, dir_mask, img_scale) 
         except (AssertionError, RuntimeError):
             dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
 
@@ -190,9 +186,9 @@ def train_net(net,
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=15, help='Number of epochs')
+    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=30, help='Number of epochs')
     parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
-    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
+    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
     parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')
@@ -200,7 +196,7 @@ def get_args():
                         help='Percent of the data that is used as validation (0-100)')
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=True, help='Use bilinear upsampling')
-    parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
+    parser.add_argument('--classes', '-c', type=int, default=9, help='Number of classes')
 
     return parser.parse_args()
 

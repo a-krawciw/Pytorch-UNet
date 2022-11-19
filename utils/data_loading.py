@@ -3,6 +3,7 @@ from os import listdir
 from os.path import splitext
 from pathlib import Path
 
+import pandas as pd
 import numpy as np
 import torch
 from PIL import Image
@@ -25,7 +26,7 @@ class BasicDataset(Dataset):
     def __len__(self):
         return len(self.ids)
 
-    def preprocess(self,pil_img, scale, is_mask):
+    def preprocess(self,pil_img, scale, is_mask, orient_class):
         w, h = pil_img.size
         newW, newH = int(scale * w), int(scale * h)
         assert newW > 0 and newH > 0, 'Scale is too small, resized images would have no pixel'
@@ -38,7 +39,7 @@ class BasicDataset(Dataset):
             else:
                 img_ndarray = img_ndarray.transpose((2, 0, 1))
         else:
-            img_ndarray = img_ndarray / 255
+            img_ndarray = (img_ndarray / 255) * orient_class
 
         return img_ndarray
 
@@ -57,6 +58,14 @@ class BasicDataset(Dataset):
         mask_file = list(self.masks_dir.glob(name + self.mask_suffix + '.*'))
         img_file = list(self.images_dir.glob(name + '.*'))
 
+        # For orientation:
+        orientation_file = list(self.masks_dir.glob('ped_orientation' + '.*'))
+        orient_data = pd.read_csv(orientation_file[0])
+        orient_class = pd.DataFrame(orient_data, columns=["class"])
+        orient_class = orient_class.values[int(name)][0]
+        #orient_class = 1 # When using 2 classes only
+
+
         assert len(img_file) == 1, f'Either no image or multiple images found for the ID {name}: {img_file}'
         assert len(
             mask_file) == 1, f'Either no mask or multiple masks found for the ID {name + self.mask_suffix + ".*"}: {mask_file}'
@@ -66,8 +75,8 @@ class BasicDataset(Dataset):
         assert img.size == mask.size, \
             f'Image and mask {name} should be the same size, but are {img.size} and {mask.size}'
 
-        img = self.preprocess(img, self.scale, is_mask=False)
-        mask = self.preprocess(mask, self.scale, is_mask=True)
+        img = self.preprocess(img, self.scale, is_mask=False, orient_class=orient_class)
+        mask = self.preprocess(mask, self.scale, is_mask=True, orient_class=orient_class)
 
         return {
             'image': torch.as_tensor(img.copy()).float().contiguous(),
@@ -85,8 +94,8 @@ class ShuffledDataset(BasicDataset):
         self.idx_offset = np.random.randint(1, self._img_width*720) # Temporary Hardcoded image_width for now
         return super().__getitem__(item)
 
-    def preprocess(self, pil_img, scale, is_mask):
-        img = super().preprocess(pil_img, scale, is_mask)
+    def preprocess(self, pil_img, scale, is_mask, orient_class=0):
+        img = super().preprocess(pil_img, scale, is_mask, orient_class)
         img_cop = img.copy()
 
         if is_mask:

@@ -25,7 +25,7 @@ def predict_img(net,
                 scale_factor=1,
                 out_threshold=0.5):
     net.eval()
-    img = torch.from_numpy(BasicDataset.preprocess(BasicDataset, full_img, scale_factor, is_mask=False))
+    img = torch.from_numpy(BasicDataset.preprocess(BasicDataset, full_img, scale_factor, is_mask=False, orient_class=0))
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
@@ -42,8 +42,12 @@ def predict_img(net,
             transforms.Resize((full_img.size[1], full_img.size[0])),
             transforms.ToTensor()
         ])
-
-        full_mask = tf(probs.cpu()).squeeze()
+        
+        if net.n_classes > 2:
+            full_mask = probs.squeeze(0)
+            full_mask = probs.squeeze().cpu()
+        else:
+            full_mask = tf(probs.cpu()).squeeze() # Doesnt seem to work for multi classes
 
     if net.n_classes == 1:
         return (full_mask > out_threshold).numpy()
@@ -103,7 +107,7 @@ if __name__ == '__main__':
     mask_files = [os.path.join(masks_dir, file) for file in sorted(os.listdir(masks_dir)) if not file.startswith('.')]
     out_files = [os.path.join(out_mask_dir, file) for file in sorted(os.listdir(images_dir)) if not file.startswith('.')]
 
-    net = UNet(n_channels=1, n_classes=2, bilinear=True)
+    net = UNet(n_channels=1, n_classes=9, bilinear=True)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Loading model ')
