@@ -25,7 +25,7 @@ def predict_img(net,
                 scale_factor=1,
                 out_threshold=0.5):
     net.eval()
-    img = torch.from_numpy(BasicDataset.preprocess(full_img, scale_factor, is_mask=False))
+    img = torch.from_numpy(BasicDataset.preprocess(None, full_img, scale_factor, is_mask=False))
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
@@ -88,12 +88,12 @@ PLOT = False
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    dataset_dir = Path("/home/alec/Documents/UofT/AER1515/coat_pass2")
+    dataset_dir = Path("/home/alec/Documents/UofT/AER1515/coatpass6_2022-11-09-13-07-59")
 
     images_dir = dataset_dir / "range"
     out_mask_dir = dataset_dir / "preds"
     masks_dir = dataset_dir / "mask"
-    model_dir = Path("/home/alec/Documents/UofT/AER1515/coat_pass3")
+    model_dir = Path("/home/alec/Documents/UofT/AER1515/coatpass6_2022-11-09-13-07-59")
     #images_dir = Path("./data/imgs")
     #out_mask_dir = Path("./val/preds")
     #masks_dir = Path("./data/masks")

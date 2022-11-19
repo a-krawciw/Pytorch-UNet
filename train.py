@@ -16,7 +16,7 @@ from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
 
-dataset_dir = Path("/home/alec/Documents/UofT/AER1515/coat_pass2")
+dataset_dir = Path("/home/alec/Documents/UofT/AER1515/coatpass6_2022-11-09-13-07-59")
 dir_img = dataset_dir / "range"
 dir_mask = dataset_dir / "mask"
 dir_checkpoint = Path('./checkpoints/')
@@ -33,7 +33,7 @@ def train_net(net,
               amp: bool = False):
     # 1. Create dataset
     try:
-        dataset = ShuffledDataset(dir_img, dir_mask, img_scale)
+        dataset = BasicDataset(dir_img, dir_mask, img_scale)
     except (AssertionError, RuntimeError):
         dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
 
