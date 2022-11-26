@@ -1,9 +1,11 @@
 import logging
+import os
 from os import listdir
 from os.path import splitext
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
@@ -93,7 +95,14 @@ class ShuffledDataset(BasicDataset):
 
         return img
 
+class Ped50Dataset(BasicDataset):
 
-class CarvanaDataset(BasicDataset):
-    def __init__(self, images_dir, masks_dir, scale=1):
-        super().__init__(images_dir, masks_dir, scale, mask_suffix='_mask')
+    def __init__(self, root_dir):
+        super(Ped50Dataset, self).__init__(os.path.join(root_dir, "range"), os.path.join(root_dir, "mask"), 1)
+        self.orientation_data = pd.read_csv(os.path.join(root_dir, "ped_orientation.csv"))
+
+    def __getitem__(self, item):
+        base_dict = super(Ped50Dataset, self).__getitem__(item)
+        name = self.ids[item]
+        base_dict['angle'] = torch.as_tensor(self.orientation_data['orientation'][int(name)]).float()
+        return base_dict

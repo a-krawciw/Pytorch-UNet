@@ -12,12 +12,12 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
-from utils.data_loading import BasicDataset, ShuffledDataset
+from utils.data_loading import BasicDataset, ShuffledDataset, Ped50Dataset
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
 
-dataset_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-06")
+dataset_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-51")
 dir_img = dataset_dir / "range"
 dir_mask = dataset_dir / "mask"
 dir_checkpoint = Path('./checkpoints/')
@@ -34,7 +34,7 @@ def train_net(net,
               amp: bool = False):
     # 1. Create dataset
     try:
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+        dataset = Ped50Dataset(dataset_dir)
     except (AssertionError, RuntimeError):
         dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
 
@@ -82,24 +82,27 @@ def train_net(net,
             for batch in train_loader:
                 images = batch['image']
                 true_masks = batch['mask']
+                true_angles = batch['angle']
 
                 assert images.shape[1] == net.n_channels, \
                     f'Network has been defined with {net.n_channels} input channels, ' \
                     f'but loaded images have {images.shape[1]} channels. Please check that ' \
                     'the images are loaded correctly.'
 
+
                 images = images.to(device=device, dtype=torch.float32)
                 true_masks = true_masks.to(device=device, dtype=torch.long)
-                true_angles = 0.52*torch.ones((4, 1))
                 true_angles = true_angles.to(device=device, dtype=torch.float32)
+
 
                 with torch.cuda.amp.autocast(enabled=amp):
                     masks_pred, angle = net(images)
-                    loss = criterion(masks_pred, true_masks) \
+                    mask_loss = criterion(masks_pred, true_masks) \
                            + dice_loss(F.softmax(masks_pred, dim=1).float(),
                                        F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
-                                       multiclass=True) + \
-                           angle_criterion(angle, true_angles)
+                                       multiclass=True)
+                    angle_loss = angle_criterion(angle, true_angles)
+                    loss = angle_loss
 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -112,13 +115,14 @@ def train_net(net,
                 experiment.log({
                     'train loss': loss.item(),
                     'step': global_step,
-                    'epoch': epoch
+                    'epoch': epoch,
+                    'regression_loss': angle_loss.item()
                 })
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
                 division_step = (n_train // (10 * batch_size))
-                if division_step > 0:
+                if False: #division_step > 0:
                     if global_step % division_step == 0:
                         histograms = {}
                         for tag, value in net.named_parameters():

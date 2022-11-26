@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F
 from PIL import Image
@@ -48,7 +49,7 @@ def predict_img(net,
     if net.n_classes == 1:
         return (full_mask > out_threshold).numpy(), angle
     else:
-        return F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy(), angle
+        return F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy(), angle.cpu().numpy()
 
 
 def mask_to_image(mask: np.ndarray):
@@ -88,12 +89,12 @@ PLOT = False
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    dataset_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-06")
+    dataset_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-51")
 
     images_dir = dataset_dir / "range"
     out_mask_dir = dataset_dir / "preds"
     masks_dir = dataset_dir / "mask"
-    model_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-06")
+    model_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-51")
     #images_dir = Path("./data/imgs")
     #out_mask_dir = Path("./val/preds")
     #masks_dir = Path("./data/masks")
@@ -117,9 +118,12 @@ if __name__ == '__main__':
     if model_dir == dataset_dir:
         print("Training errors")
 
+    orientation_data = pd.read_csv(os.path.join(dataset_dir, "ped_orientation.csv"))
+
     ious = []
     pres = []
     recalls = []
+    angles = []
     for i, (range_file, mask_file) in enumerate(zip(range_files, mask_files)):
         #logging.info(f'\nPredicting image {range_file} ...')
         img = Image.open(range_file)
@@ -138,8 +142,9 @@ if __name__ == '__main__':
         result.save(out_filename)
         #logging.info(f'Mask saved to {out_filename}')
 
+        angles.append(angle.squeeze())
+
         range_image = np.array(img)
-        print(angle)
         mask = mask[-1]
         mask = mask.astype(bool)
         valid_idxs = range_image > 0
@@ -199,8 +204,14 @@ if __name__ == '__main__':
             plt.title("TP: Green, FP: red, FN: blue")
             plt.show()
             #plot_img_and_mask(true_mask, mask)
+
+    plt.plot(angles, label="Network Predictions")
+    plt.plot(orientation_data['orientation'].squeeze(),label="True")
+    print(orientation_data['orientation'].mean())
+    plt.legend()
     print(f"Mean IOU={np.mean(ious)}")
     print(f"Mean Precision={np.mean(pres)}")
     print(f"Mean Recall={np.mean(recalls)}")
+    plt.figure()
     plt.hist(ious)
     plt.show()
