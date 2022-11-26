@@ -30,7 +30,7 @@ def predict_img(net,
     img = img.to(device=device, dtype=torch.float32)
 
     with torch.no_grad():
-        output = net(img)
+        output, angle = net(img)
 
         if net.n_classes > 1:
             probs = F.softmax(output, dim=1)[0]
@@ -46,9 +46,9 @@ def predict_img(net,
         full_mask = tf(probs.cpu()).squeeze()
 
     if net.n_classes == 1:
-        return (full_mask > out_threshold).numpy()
+        return (full_mask > out_threshold).numpy(), angle
     else:
-        return F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy()
+        return F.one_hot(full_mask.argmax(dim=0), net.n_classes).permute(2, 0, 1).numpy(), angle
 
 
 def mask_to_image(mask: np.ndarray):
@@ -88,12 +88,12 @@ PLOT = False
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    dataset_dir = Path("/home/alec/Documents/UofT/AER1515/coatpass6_2022-11-09-13-07-59")
+    dataset_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-06")
 
     images_dir = dataset_dir / "range"
     out_mask_dir = dataset_dir / "preds"
     masks_dir = dataset_dir / "mask"
-    model_dir = Path("/home/alec/Documents/UofT/AER1515/coatpass6_2022-11-09-13-07-59")
+    model_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-06")
     #images_dir = Path("./data/imgs")
     #out_mask_dir = Path("./val/preds")
     #masks_dir = Path("./data/masks")
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         true_mask = np.array(true_mask) / 255
         true_mask = true_mask.astype(bool)
 
-        mask = predict_img(net=net,
+        mask, angle = predict_img(net=net,
                            full_img=img,
                            scale_factor=1,
                            out_threshold=0.5,
@@ -139,6 +139,7 @@ if __name__ == '__main__':
         #logging.info(f'Mask saved to {out_filename}')
 
         range_image = np.array(img)
+        print(angle)
         mask = mask[-1]
         mask = mask.astype(bool)
         valid_idxs = range_image > 0
@@ -153,7 +154,7 @@ if __name__ == '__main__':
         tn = np.sum(tn_mask[valid_idxs])
         fn = np.sum(fn_mask[valid_idxs])
 
-        out_vis = 255*np.ones((80, 720, 3), dtype=np.uint8)
+        out_vis = 255*np.ones((mask.shape[0], mask.shape[1], 3), dtype=np.uint8)
         red = (255, 0, 0)
         green = (0, 255, 0)
         blue = (0, 0, 255)

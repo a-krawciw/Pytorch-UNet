@@ -21,6 +21,10 @@ class UNet(nn.Module):
         self.up3 = Up(256, 128 // factor, bilinear)
         self.up4 = Up(128, 64, bilinear)
         self.outc = OutConv(64, n_classes)
+        self.filter_k = OutConv(512, 10)
+        self.flattener = nn.Flatten()
+        self.fc1 = nn.Linear(10*5*45, 512)
+        self.fc2 =nn.Linear(512, 1)
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -33,4 +37,10 @@ class UNet(nn.Module):
         x = self.up3(x, x2)
         x = self.up4(x, x1)
         logits = self.outc(x)
-        return logits
+
+        reduced = self.filter_k(x5)
+        flattened = self.flattener(reduced)
+        xreg = self.fc1(flattened)
+        xreg = nn.ReLU()(xreg)
+        xreg = self.fc2(xreg)
+        return logits, xreg
