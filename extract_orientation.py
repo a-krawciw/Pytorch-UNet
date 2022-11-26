@@ -40,7 +40,7 @@ run_list = [
             #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
 ]
 
-PED_RUN_DIR = "/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed/_2019-02-09-15-36-46"
+PED_RUN_DIR = "/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed/_2019-02-09-13-04-06"
 PED_MOTION_PATH = PED_RUN_DIR + "/ped_motion.csv"
 PED_MASK_PATH = PED_RUN_DIR + "/mask"
 OUTPUT_FILE = PED_RUN_DIR + "/mask/ped_orientation.csv"
@@ -61,8 +61,8 @@ writer = csv.writer(f)
 header = ['index', 'orientation', 'class']
 writer.writerow(header)
 
-for i in range(iterations+1):
-    if i + LOOKAHEAD < iterations:
+for i in range(iterations):
+    if i + LOOKAHEAD< iterations:
         x1 = px.values[i][0]
         x2 = px.values[i+LOOKAHEAD][0]
         dx = x2-x1
@@ -70,6 +70,8 @@ for i in range(iterations+1):
         y2 = py.values[i+LOOKAHEAD][0]
         dy = y2-y1
         yaw = atan2(dy,dx)
+        if yaw < 0:
+            yaw = yaw + (2*pi)
         orientation_arr.append(yaw)
 
         # Write row to csv

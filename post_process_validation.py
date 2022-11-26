@@ -33,7 +33,7 @@ for file in sorted(os.listdir(VALIDATION_PATH)):
     for x in numpy_img:
         for each_pixel in x:
             # Away from lidar is class 1, moving left is 2, moving towards is 3, moving right is 4
-            pixel_class = (each_pixel * n_classes) / 255
+            pixel_class = round((each_pixel * n_classes) / 255)
             if pixel_class != 0:
                 pixel_orient = (pixel_class-1) * ((2 * pi) / (n_classes-1))
                 orient_arr.append(pixel_orient)

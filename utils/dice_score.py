@@ -13,6 +13,7 @@ def dice_coeff(input: Tensor, target: Tensor, reduce_batch_first: bool = False, 
         sets_sum = torch.sum(input) + torch.sum(target)
         if sets_sum.item() == 0:
             sets_sum = 2 * inter
+            #sets_sum = 1e6
 
         return (2 * inter + epsilon) / (sets_sum + epsilon)
     else:
@@ -30,7 +31,7 @@ def multiclass_dice_coeff(input: Tensor, target: Tensor, reduce_batch_first: boo
     for channel in range(input.shape[1]):
         dice += dice_coeff(input[:, channel, ...], target[:, channel, ...], reduce_batch_first, epsilon)
 
-    return dice / input.shape[1]
+    return dice / (input.shape[1]-1)
 
 
 def dice_loss(input: Tensor, target: Tensor, multiclass: bool = False):

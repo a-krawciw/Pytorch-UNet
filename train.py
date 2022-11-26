@@ -15,6 +15,7 @@ from utils.data_loading import BasicDataset, ShuffledDataset
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
+import numpy as np
 
 dataset_dir = Path("/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed")
 run_list = [
@@ -30,11 +31,11 @@ run_list = [
             "_2019-02-09-15-55-03", # 10m SEQ: 29
             "_2019-02-09-14-56-32",  # Toward SEQ: 38
             "_2019-02-09-15-32-23", # Toward SEQ: 40
-            #"_2019-02-09-14-59-13", # Curved SEQ: 46 # Quite far
-            #"_2019-02-09-15-00-09", # Curved SEQ: 47 # Quite far
-            #"_2019-02-09-15-01-27", # ZigZag SEQ: 48 # Quite far
-            #"_2019-02-09-15-34-30", # Curved SEQ: 49
-            "_2019-02-09-15-36-46" # ZigZag SEQ: 51
+            "_2019-02-09-14-59-13", # Curved SEQ: 46 # Quite far
+            "_2019-02-09-15-00-09", # Curved SEQ: 47 # Quite far
+            "_2019-02-09-15-01-27", # ZigZag SEQ: 48 # Quite far
+            "_2019-02-09-15-34-30", # Curved SEQ: 49
+            #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
 ]
 
 dir_img = dataset_dir / "range"
@@ -106,6 +107,11 @@ def train_net(net,
     #scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=2)  # goal: maximize Dice score
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss()
+    # Using cross entropy with higher weights for orientation classes
+    weights = [0.01, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    class_weights = torch.FloatTensor(weights).cuda()
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+
     global_step = 0
 
     # 5. Begin training
@@ -116,7 +122,6 @@ def train_net(net,
             for batch in train_loader:
                 images = batch['image']
                 true_masks = batch['mask']
-
                 assert images.shape[1] == net.n_channels, \
                     f'Network has been defined with {net.n_channels} input channels, ' \
                     f'but loaded images have {images.shape[1]} channels. Please check that ' \
@@ -127,10 +132,11 @@ def train_net(net,
 
                 with torch.cuda.amp.autocast(enabled=amp):
                     masks_pred = net(images)
-                    loss = criterion(masks_pred, true_masks) \
-                           + dice_loss(F.softmax(masks_pred, dim=1).float(),
-                                       F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
-                                       multiclass=True)
+                    loss = criterion(masks_pred, true_masks) #\
+                           #+ dice_loss(F.softmax(masks_pred, dim=1).float(),
+                           #            F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
+                           #            multiclass=True)
+
 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -159,7 +165,8 @@ def train_net(net,
                             if not torch.isinf(value.grad).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        val_score = evaluate(net, val_loader, device)
+                        #val_score = evaluate(net, val_loader, device)
+                        val_score = 0
                         #scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))
@@ -186,13 +193,13 @@ def train_net(net,
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=30, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=32, help='Batch size')
+    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=100, help='Number of epochs')
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=4, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
     parser.add_argument('--scale', '-s', type=float, default=1.0, help='Downscaling factor of the images')
-    parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
+    parser.add_argument('--validation', '-v', dest='val', type=float, default=0.0,
                         help='Percent of the data that is used as validation (0-100)')
     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
     parser.add_argument('--bilinear', action='store_true', default=True, help='Use bilinear upsampling')
