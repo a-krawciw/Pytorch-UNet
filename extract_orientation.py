@@ -4,10 +4,9 @@
 # Output: ped_orientation.csv (file with ground truth per pixel orientation of the person in the ped50 run in lidar frame
 
 import pandas as pd # for processing csv
-from math import atan2, ceil, pi
+from math import atan2, ceil, pi, sqrt
 import os
 import csv
-
 
 # Takes in yaw value from [-pi pi] and the number of orientation classes and outputs which class corresponds to that yaw value
 def classify_orientation(yaw, n_classes):
@@ -44,7 +43,8 @@ PED_RUN_DIR = "/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50
 PED_MOTION_PATH = PED_RUN_DIR + "/ped_motion.csv"
 PED_MASK_PATH = PED_RUN_DIR + "/mask"
 OUTPUT_FILE = PED_RUN_DIR + "/mask/ped_orientation.csv"
-LOOKAHEAD = 30
+VEL_THRESHOLD = 0.35
+MIN_LOOKAHEAD = 1
 n_classes = 9
 
 # Check the length of the mask directory, this controls our loop intervals because the ped_motion.csv has more data then we need
@@ -53,6 +53,8 @@ iterations=len([entry for entry in os.listdir(PED_MASK_PATH ) if os.path.isfile(
 data = pd.read_csv(PED_MOTION_PATH)
 px = pd.DataFrame(data, columns=["smooth_px_v"])
 py = pd.DataFrame(data, columns=["smooth_py_v"])
+vx = pd.DataFrame(data, columns=["vx_v"])
+vy = pd.DataFrame(data, columns=["vy_v"])
 orientation_arr = []
 
 # Open new csv
@@ -61,8 +63,26 @@ writer = csv.writer(f)
 header = ['index', 'orientation', 'class']
 writer.writerow(header)
 
+
 for i in range(iterations):
-    if i + LOOKAHEAD< iterations:
+    # dynamically increase lookahead frames for vector computation depending on if the person is moving or not
+    LOOKAHEAD = MIN_LOOKAHEAD
+    for j in range(iterations-i-1):
+        if (sqrt(vx.values[i+LOOKAHEAD][0]**2 + vy.values[i+LOOKAHEAD][0]**2) < VEL_THRESHOLD):
+            LOOKAHEAD = LOOKAHEAD + 1
+        else:
+            break
+
+    # If we have run out of horizon and are not moving, take the last valid orientation to not have changed
+    if i + LOOKAHEAD > iterations-1:
+        orientation_arr.append(orientation_arr[-1])
+
+        # Write row to csv
+        yaw_class = classify_orientation(yaw,n_classes)
+        row = [i,yaw, yaw_class]
+        writer.writerow(row)
+
+    else:
         x1 = px.values[i][0]
         x2 = px.values[i+LOOKAHEAD][0]
         dx = x2-x1
@@ -79,15 +99,6 @@ for i in range(iterations):
         row = [i,yaw, yaw_class]
         writer.writerow(row)
 
-
-    # If we have run out of horizon, take the last valid orientation to not have changed
-    else:
-        orientation_arr.append(orientation_arr[-1])
-
-        # Write row to csv
-        yaw_class = classify_orientation(yaw,n_classes)
-        row = [i,yaw, yaw_class]
-        writer.writerow(row)
-
 f.close()
 print("success")
+
