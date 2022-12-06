@@ -11,13 +11,13 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split, ConcatDataset
 from tqdm import tqdm
 
-from utils.data_loading import BasicDataset, ShuffledDataset
+from utils.data_loading import BasicDataset, ShuffledDataset, Ped50Dataset, JitteredDataset
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
 import numpy as np
 
-dataset_dir = Path("/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed")
+dataset_dir = Path("/home/alec/UofTAER1515/Ped50Data")
 run_list = [
             "_2019-02-09-13-04-06", # 5m  SEQ: 1 
             "_2019-02-09-13-04-51", # 5m  SEQ: 2 
@@ -27,21 +27,21 @@ run_list = [
             #"_2019-02-09-15-16-50", # 5m  SEQ: 16 # has a bad mask
             #"_2019-02-09-15-18-22", # 10m SEQ: 17 # has bad mask
             #"_2019-02-09-15-19-03", # 10m SEQ: 18 # has bad mask
-            "_2019-02-09-15-52-16", # 5m  SEQ: 28
-            "_2019-02-09-15-55-03", # 10m SEQ: 29
-            "_2019-02-09-14-56-32",  # Toward SEQ: 38
-            "_2019-02-09-15-32-23", # Toward SEQ: 40
-            "_2019-02-09-14-59-13", # Curved SEQ: 46 # Quite far
-            "_2019-02-09-15-00-09", # Curved SEQ: 47 # Quite far
-            "_2019-02-09-15-01-27", # ZigZag SEQ: 48 # Quite far
-            "_2019-02-09-15-34-30", # Curved SEQ: 49
+            #"_2019-02-09-15-52-16", # 5m  SEQ: 28
+            #"_2019-02-09-15-55-03", # 10m SEQ: 29
+            #"_2019-02-09-14-56-32",  # Toward SEQ: 38
+            #"_2019-02-09-15-32-23", # Toward SEQ: 40
+            #"_2019-02-09-14-59-13", # Curved SEQ: 46 # Quite far
+            #"_2019-02-09-15-00-09", # Curved SEQ: 47 # Quite far
+            #"_2019-02-09-15-01-27", # ZigZag SEQ: 48 # Quite far
+            #"_2019-02-09-15-34-30", # Curved SEQ: 49
             #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
 ]
 
 dir_img = dataset_dir / "range"
 dir_mask = dataset_dir / "mask"
 dir_checkpoint = Path('./checkpoints/')
-dir_output = Path("/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet")
+dir_output = Path("/home/alec/UofTAER1515")
 
 def train_net(net,
               device,
@@ -60,7 +60,7 @@ def train_net(net,
         dir_mask = dataset_dir / each_run / "mask"
         # 1. Create dataset
         try:
-            dataset = BasicDataset(dir_img, dir_mask, img_scale)
+            dataset = JitteredDataset(Ped50Dataset(dataset_dir / each_run))
             #dataset = ShuffledDataset(dir_img, dir_mask, img_scale) 
         except (AssertionError, RuntimeError):
             dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
@@ -193,7 +193,7 @@ def train_net(net,
 
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=100, help='Number of epochs')
+    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=10, help='Number of epochs')
     parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=4, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
                         help='Learning rate', dest='lr')

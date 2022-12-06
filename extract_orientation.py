@@ -21,7 +21,7 @@ def classify_orientation(yaw, n_classes):
 
 run_list = [
             "_2019-02-09-13-04-06", # 5m  SEQ: 1 
-            #"_2019-02-09-13-04-51", # 5m  SEQ: 2 
+            "_2019-02-09-13-04-51", # 5m  SEQ: 2
             #"_2019-02-09-13-07-14", # 10m SEQ: 3 
             #"_2019-02-09-13-08-12", # 10m SEQ: 4 # Note this one appears malformed, dont use
             #"_2019-02-09-15-16-08", # 5m  SEQ: 15 # I think the mask is empty on this one
@@ -39,7 +39,7 @@ run_list = [
             #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
 ]
 
-PED_RUN_DIR = "/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed/_2019-02-09-13-04-06"
+PED_RUN_DIR = "/home/alec/UofTAER1515/Ped50Data/_2019-02-09-13-04-06"
 PED_MOTION_PATH = PED_RUN_DIR + "/ped_motion.csv"
 PED_MASK_PATH = PED_RUN_DIR + "/mask"
 OUTPUT_FILE = PED_RUN_DIR + "/mask/ped_orientation.csv"
