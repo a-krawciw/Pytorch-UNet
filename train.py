@@ -31,9 +31,9 @@ run_list = [
             "_2019-02-09-15-55-03", # 10m SEQ: 29
             "_2019-02-09-14-56-32",  # Toward SEQ: 38
             "_2019-02-09-15-32-23", # Toward SEQ: 40
-            "_2019-02-09-14-59-13", # Curved SEQ: 46 # Quite far
-            "_2019-02-09-15-00-09", # Curved SEQ: 47 # Quite far
-            "_2019-02-09-15-01-27", # ZigZag SEQ: 48 # Quite far
+            #"_2019-02-09-14-59-13", # Curved SEQ: 46 # Quite far
+            #"_2019-02-09-15-00-09", # Curved SEQ: 47 # Quite far
+            "_2019-02-09-15-01-27", # ZigZag SEQ: 48
             "_2019-02-09-15-34-30", # Curved SEQ: 49
             #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
 ]
@@ -108,9 +108,9 @@ def train_net(net,
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss()
     # Using cross entropy with higher weights for orientation classes
-    weights = [0.01, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-    class_weights = torch.FloatTensor(weights).cuda()
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    #weights = [0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    #class_weights = torch.FloatTensor(weights).cuda()
+    #criterion = nn.CrossEntropyLoss(weight=class_weights)
 
     global_step = 0
 
@@ -194,7 +194,7 @@ def train_net(net,
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=100, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=4, help='Batch size')
+    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=8, help='Batch size')
     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-4,
                         help='Learning rate', dest='lr')
     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')

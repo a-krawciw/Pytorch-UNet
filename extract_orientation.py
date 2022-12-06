@@ -7,6 +7,8 @@ import pandas as pd # for processing csv
 from math import atan2, ceil, pi, sqrt
 import os
 import csv
+import matplotlib.pyplot as plt
+import numpy as np
 
 # Takes in yaw value from [-pi pi] and the number of orientation classes and outputs which class corresponds to that yaw value
 def classify_orientation(yaw, n_classes):
@@ -23,7 +25,7 @@ run_list = [
             "_2019-02-09-13-04-06", # 5m  SEQ: 1 
             #"_2019-02-09-13-04-51", # 5m  SEQ: 2 
             #"_2019-02-09-13-07-14", # 10m SEQ: 3 
-            #"_2019-02-09-13-08-12", # 10m SEQ: 4 # Note this one appears malformed, dont use
+            #"_2019-02-09-13-08-12", # 10m SEQ: 4 #ped_motion is malformed, dont use
             #"_2019-02-09-15-16-08", # 5m  SEQ: 15 # I think the mask is empty on this one
             #"_2019-02-09-15-16-50", # 5m  SEQ: 16 # has a bad mask
             #"_2019-02-09-15-18-22", # 10m SEQ: 17 # has bad mask
@@ -39,7 +41,7 @@ run_list = [
             #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
 ]
 
-PED_RUN_DIR = "/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed/_2019-02-09-13-04-06"
+PED_RUN_DIR = "/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed/_2019-02-09-15-36-46"
 PED_MOTION_PATH = PED_RUN_DIR + "/ped_motion.csv"
 PED_MASK_PATH = PED_RUN_DIR + "/mask"
 OUTPUT_FILE = PED_RUN_DIR + "/mask/ped_orientation.csv"
@@ -100,5 +102,10 @@ for i in range(iterations):
         writer.writerow(row)
 
 f.close()
+
+# Test plotting the orientation trajectory
+index = np.linspace(0,iterations-1, iterations)
+plt.plot(index,orientation_arr)
+plt.show()
 print("success")
 
