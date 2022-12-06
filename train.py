@@ -11,7 +11,7 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split, ConcatDataset
 from tqdm import tqdm
 
-from utils.data_loading import BasicDataset, ShuffledDataset, Ped50Dataset, JitteredDataset
+from utils.data_loading import BasicDataset, ShuffledDataset, Ped50Dataset, JitteredDataset, ShuffledOrientationDataset
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
@@ -60,11 +60,12 @@ def train_net(net,
         dir_mask = dataset_dir / each_run / "mask"
         # 1. Create dataset
         try:
-            dataset = JitteredDataset(Ped50Dataset(dataset_dir / each_run))
+            dataset = ShuffledOrientationDataset(JitteredDataset(Ped50Dataset(dataset_dir / each_run)))
             #dataset = ShuffledDataset(dir_img, dir_mask, img_scale) 
         except (AssertionError, RuntimeError):
             dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
 
+        all_datasets.append(dataset)
         all_datasets.append(dataset)
 
     dataset = ConcatDataset(all_datasets)
@@ -165,8 +166,8 @@ def train_net(net,
                             if not torch.isinf(value.grad).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        #val_score = evaluate(net, val_loader, device)
-                        val_score = 0
+                        val_score = evaluate(net, val_loader, device)
+                        #val_score = 0
                         #scheduler.step(val_score)
 
                         logging.info('Validation Dice score: {}'.format(val_score))

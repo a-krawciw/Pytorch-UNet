@@ -39,7 +39,7 @@ run_list = [
             #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
 ]
 
-PED_RUN_DIR = "/home/alec/UofTAER1515/Ped50Data/_2019-02-09-13-04-06"
+PED_RUN_DIR = "/home/alec/UofTAER1515/Ped50Data/test"
 PED_MOTION_PATH = PED_RUN_DIR + "/ped_motion.csv"
 PED_MASK_PATH = PED_RUN_DIR + "/mask"
 OUTPUT_FILE = PED_RUN_DIR + "/mask/ped_orientation.csv"

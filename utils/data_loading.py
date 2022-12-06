@@ -150,4 +150,4 @@ class JitteredDataset(BasicDataset):
             mask_out[-mask_region.shape[0]:, :] = mask_region
             img_out[:, -img_region.shape[1]:, :] = img_region
 
-        return img, mask
+        return img_out, mask_out

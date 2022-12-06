@@ -9,8 +9,8 @@ import numpy as np
 from PIL import Image
 
 
-VALIDATION_PATH = "/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed/combined_data/test/pred"
-OUTPUT_FILE = "/home/jordy/aer1515/python_env2/Course Project/Pytorch-UNet/ped50_processed/combined_data/test/ped_orientation.csv"
+VALIDATION_PATH = "Ped50Data/test/pred"
+OUTPUT_FILE = "Ped50Data/test/ped_orientation.csv"
 n_classes = 9
 
 # Open new csv
@@ -27,26 +27,17 @@ for file in sorted(os.listdir(VALIDATION_PATH)):
     numpy_img = np.asarray(img)
 
     # Iterate through all pixels
-    orient_arr = []
-    
-    # Probably can vectorize this with numpy arrays to make it way faster, but for now its fine (approx 60-90 seconds for most runs)
-    for x in numpy_img:
-        for each_pixel in x:
-            # Away from lidar is class 1, moving left is 2, moving towards is 3, moving right is 4
-            pixel_class = round((each_pixel * n_classes) / 255)
-            if pixel_class != 0:
-                pixel_orient = (pixel_class-1) * ((2 * pi) / (n_classes-1))
-                orient_arr.append(pixel_orient)
-    
-    # Average the orientation of all the pixels
-    if len(orient_arr) != 0:
-        avg_orient = sum(orient_arr) / len(orient_arr)
+
+    if np.mean(numpy_img > 0) != 0:
+        p_class = np.round(numpy_img / 255.0 * n_classes)
+        avg_orient = np.mean(p_class[p_class>0], axis=None) - 1
         # Write the result for this image to csv file
-        row = [i,avg_orient, ceil(avg_orient / ((2*pi)/(n_classes-1)))]
+        row = [i, avg_orient*np.pi/4, np.round(avg_orient)]
         writer.writerow(row)
     else:
         row = [i,"NULL"]
         writer.writerow(row)
+
 
     i = i + 1
 
