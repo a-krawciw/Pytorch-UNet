@@ -9,19 +9,39 @@ import torch.nn as nn
 import torch.nn.functional as F
 import wandb
 from torch import optim
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, ConcatDataset
 from tqdm import tqdm
 
-from utils.data_loading import BasicDataset, ShuffledDataset, Ped50Dataset
+from utils.data_loading import BasicDataset, ShuffledDataset, Ped50Dataset, JitteredDataset, ShuffledOrientationDataset
 from utils.dice_score import dice_loss
 from evaluate import evaluate
 from unet import UNet
 
-dataset_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-51")
+dataset_dir = Path("/home/alec/UofTAER1515/Ped50Data")
+run_list = [
+            "_2019-02-09-13-04-06", # 5m  SEQ: 1
+            "_2019-02-09-13-04-51", # 5m  SEQ: 2
+            "_2019-02-09-13-07-14", # 10m SEQ: 3
+            #"_2019-02-09-13-08-12", # 10m SEQ: 4 # Note this one appears malformed, dont use
+            #"_2019-02-09-15-16-08", # 5m  SEQ: 15 # I think the mask is empty on this one
+            #"_2019-02-09-15-16-50", # 5m  SEQ: 16 # has a bad mask
+            #"_2019-02-09-15-18-22", # 10m SEQ: 17 # has bad mask
+            #"_2019-02-09-15-19-03", # 10m SEQ: 18 # has bad mask
+            #"_2019-02-09-15-52-16", # 5m  SEQ: 28
+            #"_2019-02-09-15-55-03", # 10m SEQ: 29
+            #"_2019-02-09-14-56-32",  # Toward SEQ: 38
+            #"_2019-02-09-15-32-23", # Toward SEQ: 40
+            #"_2019-02-09-14-59-13", # Curved SEQ: 46 # Quite far
+            #"_2019-02-09-15-00-09", # Curved SEQ: 47 # Quite far
+            #"_2019-02-09-15-01-27", # ZigZag SEQ: 48 # Quite far
+            #"_2019-02-09-15-34-30", # Curved SEQ: 49
+            #"_2019-02-09-15-36-46" # ZigZag SEQ: 51
+]
+
 dir_img = dataset_dir / "range"
 dir_mask = dataset_dir / "mask"
 dir_checkpoint = Path('./checkpoints/')
-dir_output = dataset_dir
+dir_output = Path("/home/alec/UofTAER1515")
 
 def train_net(net,
               device,
@@ -30,13 +50,30 @@ def train_net(net,
               learning_rate: float = 5e-5,
               val_percent: float = 0.1,
               save_checkpoint: bool = True,
-              img_scale: float = 0.5,
+              img_scale: float = 1.0,
               amp: bool = False):
+
+    # Concatonating Datasets for Multiple runs
+    all_datasets = []
+    for each_run in run_list:
+        dir_img = dataset_dir / each_run / "range"
+        dir_mask = dataset_dir / each_run / "mask"
+        # 1. Create dataset
+        try:
+            dataset = ShuffledOrientationDataset(JitteredDataset(Ped50Dataset(dataset_dir / each_run)))
+            #dataset = ShuffledDataset(dir_img, dir_mask, img_scale)
+        except (AssertionError, RuntimeError):
+            dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
+
+        all_datasets.append(dataset)
+        all_datasets.append(dataset)
+
+    dataset = ConcatDataset(all_datasets)
     # 1. Create dataset
-    try:
-        dataset = Ped50Dataset(dataset_dir)
-    except (AssertionError, RuntimeError):
-        dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
+    #try:
+    #    dataset = BasicDataset(dir_img, dir_mask, img_scale)
+    #except (AssertionError, RuntimeError):
+    #    dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
@@ -72,6 +109,11 @@ def train_net(net,
     grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
     criterion = nn.CrossEntropyLoss()
     angle_criterion = nn.MSELoss()
+    # Using cross entropy with higher weights for orientation classes
+    weights = [0.01, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    class_weights = torch.FloatTensor(weights).cuda()
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+
     global_step = 0
 
     # 5. Begin training
@@ -88,7 +130,6 @@ def train_net(net,
                     f'Network has been defined with {net.n_channels} input channels, ' \
                     f'but loaded images have {images.shape[1]} channels. Please check that ' \
                     'the images are loaded correctly.'
-
 
                 images = images.to(device=device, dtype=torch.float32)
                 true_masks = true_masks.to(device=device, dtype=torch.long)
@@ -122,7 +163,7 @@ def train_net(net,
 
                 # Evaluation round
                 division_step = (n_train // (10 * batch_size))
-                if False: #division_step > 0:
+                if division_step > 0:
                     if global_step % division_step == 0:
                         histograms = {}
                         for tag, value in net.named_parameters():

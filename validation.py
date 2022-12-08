@@ -26,7 +26,7 @@ def predict_img(net,
                 scale_factor=1,
                 out_threshold=0.5):
     net.eval()
-    img = torch.from_numpy(BasicDataset.preprocess(None, full_img, scale_factor, is_mask=False))
+    img = torch.from_numpy(BasicDataset.preprocess(BasicDataset, full_img, scale_factor, is_mask=False))
     img = img.unsqueeze(0)
     img = img.to(device=device, dtype=torch.float32)
 
@@ -44,7 +44,11 @@ def predict_img(net,
             transforms.ToTensor()
         ])
 
-        full_mask = tf(probs.cpu()).squeeze()
+        if net.n_classes > 2:
+            full_mask = probs.squeeze(0)
+            full_mask = probs.squeeze().cpu()
+        else:
+            full_mask = tf(probs.cpu()).squeeze() # Doesnt seem to work for multi classes
 
     if net.n_classes == 1:
         return (full_mask > out_threshold).numpy(), angle
@@ -89,12 +93,11 @@ PLOT = False
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    dataset_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-51")
-
+    dataset_dir = Path("Ped50Data/_2019-02-09-13-04-06")
     images_dir = dataset_dir / "range"
-    out_mask_dir = dataset_dir / "preds"
+    out_mask_dir = dataset_dir / "pred"
     masks_dir = dataset_dir / "mask"
-    model_dir = Path("/home/alec/Documents/UofT/AER1515/Ped50Dataset/extracted_data/_2019-02-09-13-04-51")
+    model_dir = Path(".")
     #images_dir = Path("./data/imgs")
     #out_mask_dir = Path("./val/preds")
     #masks_dir = Path("./data/masks")
