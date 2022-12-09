@@ -93,7 +93,7 @@ PLOT = False
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-    dataset_dir = Path("Ped50Data/_2019-02-09-13-04-06")
+    dataset_dir = Path("Ped50Data/test")
     images_dir = dataset_dir / "range"
     out_mask_dir = dataset_dir / "pred"
     masks_dir = dataset_dir / "mask"
@@ -121,7 +121,7 @@ if __name__ == '__main__':
     if model_dir == dataset_dir:
         print("Training errors")
 
-    orientation_data = pd.read_csv(os.path.join(dataset_dir, "ped_orientation.csv"))
+    orientation_data = pd.read_csv(os.path.join(dataset_dir, "mask", "ped_orientation.csv"))
 
     ious = []
     pres = []

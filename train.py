@@ -51,7 +51,7 @@ def train_net(net,
               val_percent: float = 0.1,
               save_checkpoint: bool = True,
               img_scale: float = 1.0,
-              amp: bool = False):
+              amp: bool = True):
 
     # Concatonating Datasets for Multiple runs
     all_datasets = []
@@ -65,7 +65,6 @@ def train_net(net,
         except (AssertionError, RuntimeError):
             dataset = BasicDataset(dir_img, dir_mask, img_scale, mask_suffix='')
 
-        all_datasets.append(dataset)
         all_datasets.append(dataset)
 
     dataset = ConcatDataset(all_datasets)
@@ -89,7 +88,7 @@ def train_net(net,
     experiment = wandb.init(project='U-Net')
     experiment.config.update(dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
                                   val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale,
-                                  amp=amp))
+                                  amp=amp, angle="angle_true", angle_pred="angle_pred"))
 
     logging.info(f'''Starting training:
         Epochs:          {epochs}
@@ -112,7 +111,7 @@ def train_net(net,
     # Using cross entropy with higher weights for orientation classes
     weights = [0.01, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     class_weights = torch.FloatTensor(weights).cuda()
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    #criterion = nn.CrossEntropyLoss(weight=class_weights)
 
     global_step = 0
 
@@ -138,12 +137,12 @@ def train_net(net,
 
                 with torch.cuda.amp.autocast(enabled=amp):
                     masks_pred, angle = net(images)
-                    mask_loss = criterion(masks_pred, true_masks) \
-                           + dice_loss(F.softmax(masks_pred, dim=1).float(),
-                                       F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
-                                       multiclass=True)
+                    mask_loss = criterion(masks_pred, true_masks)
+                           #+ dice_loss(F.softmax(masks_pred, dim=1).float(),
+                                      # F.one_hot(true_masks, net.n_classes).permute(0, 3, 1, 2).float(),
+                                      # multiclass=True)
                     angle_loss = angle_criterion(angle, true_angles)
-                    loss = angle_loss
+                    loss = angle_loss + mask_loss
 
                 optimizer.zero_grad(set_to_none=True)
                 grad_scaler.scale(loss).backward()
@@ -157,7 +156,9 @@ def train_net(net,
                     'train loss': loss.item(),
                     'step': global_step,
                     'epoch': epoch,
-                    'regression_loss': angle_loss.item()
+                    'regression_loss': angle_loss.item(),
+                    'angle_true': batch['angle'][0],
+                    'angle_pred': angle.float().cpu()[0]
                 })
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 

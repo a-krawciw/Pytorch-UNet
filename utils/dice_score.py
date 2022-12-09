@@ -31,8 +31,10 @@ def multiclass_dice_coeff(input: Tensor, target: Tensor, reduce_batch_first: boo
     for channel in range(input.shape[1]):
         dice += dice_coeff(input[:, channel, ...], target[:, channel, ...], reduce_batch_first, epsilon)
 
-    return dice / (input.shape[1]-1)
-
+    if input.shape[1] > 1:
+        return dice / (input.shape[1]-1)
+    else:
+        return dice
 
 def dice_loss(input: Tensor, target: Tensor, multiclass: bool = False):
     # Dice loss (objective to minimize) between 0 and 1

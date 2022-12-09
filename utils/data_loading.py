@@ -70,15 +70,16 @@ class BasicDataset(Dataset):
 
         img = self.preprocess(img, self.scale, is_mask=False)
         mask = self.preprocess(mask, self.scale, is_mask=True)
-        return img, mask
+        return img, mask, 0
 
 
     def __getitem__(self, idx):
-        img, mask = self.load_files(idx)
+        img, mask, angle = self.load_files(idx)
 
         return {
             'image': torch.as_tensor(img.copy()).float().contiguous(),
-            'mask': torch.as_tensor(mask.copy()).long().contiguous()
+            'mask': torch.as_tensor(mask.copy()).long().contiguous(),
+            'angle': torch.as_tensor(angle).float()
         }
 
 
@@ -88,15 +89,15 @@ class Ped50Dataset(BasicDataset):
         self.root_dir = ped50_root_dir
         super().__init__(ped50_root_dir / "range", ped50_root_dir / "mask")
         self.orientation_file = self.root_dir / "mask/ped_orientation.csv"
-        orient_data = pd.read_csv(self.orientation_file)
-        self.orient_class = pd.DataFrame(orient_data, columns=["class"])
+        self.orient_data = pd.read_csv(self.orientation_file)
+        self.orient_class = pd.DataFrame(self.orient_data, columns=["class"])
+        self.orient = pd.DataFrame(self.orient_data, columns=["orientation"])
 
-    def load_files(self, idx):
-        img, mask = super().load_files(idx)
-        orient_class = self.orient_class.values[idx][0]
-        mask *= orient_class
-        return img, mask
-
+    def load_files(self, item):
+        img, mask, angle = super(Ped50Dataset, self).load_files(item)
+        name = self.ids[item]
+        angle = torch.as_tensor(self.orient.iloc[int(name)]).float()
+        return img, mask, angle
 
 class ShuffledDataset(BasicDataset):
     def __init__(self, dataset_to_shuffle: BasicDataset):
@@ -106,7 +107,7 @@ class ShuffledDataset(BasicDataset):
 
 
     def load_files(self, idx):
-        img, mask = self.dataset.load_files(idx)
+        img, mask, angle = self.dataset.load_files(idx)
         idx_offset = np.random.randint(1, img.shape[2])
         self.offset = idx_offset
         img_cop = img.copy()
@@ -117,14 +118,15 @@ class ShuffledDataset(BasicDataset):
         img[:, :, 0:-idx_offset] = img_cop[:, :, idx_offset:]
         img[:, :, -idx_offset:] = img_cop[:, :, 0:idx_offset]
 
-        return img, mask
+        return img, mask, angle
+
 
 class ShuffledOrientationDataset(ShuffledDataset):
-    def load_files(self, idx):
-        img, mask = super().load_files(idx)
-        binned_offset = np.round(self.offset / 720 * 8)
-        mask[mask > 0] = np.mod(mask[mask > 0] - 1 + binned_offset, 8) + 1
-        return img, mask
+    def load_files(self, item):
+        img, mask, angle = super(ShuffledOrientationDataset, self).load_files(item)
+        offset = self.offset / 360 * np.pi
+        angle += torch.as_tensor(offset).float()
+        return img, mask, angle
 
 class JitteredDataset(BasicDataset):
     def __init__(self, dataset_to_shuffle: BasicDataset, jitter_max = 5):
@@ -134,7 +136,7 @@ class JitteredDataset(BasicDataset):
 
 
     def load_files(self, idx):
-        img, mask = self.dataset.load_files(idx)
+        img, mask, angle = self.dataset.load_files(idx)
         idx_offset = np.random.randint(-self.jitter, self.jitter)
         img_out = np.zeros(img.shape)
         mask_out = np.zeros(mask.shape)
@@ -151,4 +153,4 @@ class JitteredDataset(BasicDataset):
             mask_out[-mask_region.shape[0]:, :] = mask_region
             img_out[:, -img_region.shape[1]:, :] = img_region
 
-        return img_out, mask_out
+        return img_out, mask_out, angle
